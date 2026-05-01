@@ -32,6 +32,39 @@ public class InventoryManager {
             System.out.println("Error adding product: " + e.getMessage());
         }
     }
+    
+    public static void updateProductPrice(int id, double newPrice) {
+        String query = "UPDATE products SET price = ? WHERE id = ?";
+
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
+            pstmt.setDouble(1, newPrice);
+            pstmt.setInt(2, id);
+
+            int rowsAffected = pstmt.executeUpdate();
+            if (rowsAffected > 0) {
+                System.out.println("Success: Price updated for Product ID " + id);
+            }
+        } catch (Exception e) {
+            System.out.println("Error updating price: " + e.getMessage());
+        }
+    }
+    
+    public static void deleteProduct(int id) {
+        String query = "DELETE FROM products WHERE id = ?";
+
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
+            pstmt.setInt(1, id);
+
+            pstmt.executeUpdate();
+            System.out.println("Success: Product ID " + id + " has been removed.");
+        } catch (Exception e) {
+            System.out.println("Error deleting product: " + e.getMessage());
+        }
+    }
 
     // 3. The MAIN method is where you "run" the code to test it
     public static void main(String[] args) {

@@ -3,14 +3,8 @@ import java.awt.EventQueue;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
-import java.awt.BorderLayout;
-import javax.swing.JTree;
-import javax.swing.JSpinner;
-import javax.swing.JTable;
-import javax.swing.JProgressBar;
-import javax.swing.JPasswordField;
 
-public class BebestMainUI extends JFrame {
+public class MainDashboard extends JFrame {
 
 	private static final long serialVersionUID = 1L;
 	private JPanel contentPane;
@@ -22,7 +16,7 @@ public class BebestMainUI extends JFrame {
 		EventQueue.invokeLater(new Runnable() {
 			public void run() {
 				try {
-					BebestMainUI frame = new BebestMainUI();
+					MainDashboard frame = new MainDashboard();
 					frame.setVisible(true);
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -34,13 +28,12 @@ public class BebestMainUI extends JFrame {
 	/**
 	 * Create the frame.
 	 */
-	public BebestMainUI() {
+	public MainDashboard() {
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setBounds(100, 100, 450, 300);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
-		contentPane.setLayout(new BorderLayout(0, 0));
 
 	}
 

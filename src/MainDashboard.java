@@ -138,7 +138,7 @@ public class MainDashboard extends JFrame {
         btnDelete.addActionListener(e -> {
             String barcode = txtBarcode.getText();
             if(!barcode.isEmpty()) {
-                int confirm = JOptionPane.showConfirmDialog(this, "Confirm deletion of Barcode: " + barcode + "?");
+            	int confirm = JOptionPane.showConfirmDialog(this, "Confirm deletion of Barcode: " + barcode + "?", "Delete Confirmation", JOptionPane.YES_NO_OPTION);
                 if(confirm == JOptionPane.YES_OPTION) {
                     InventoryManager.deleteProduct(barcode); 
                     refreshTable();

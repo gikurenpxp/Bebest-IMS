@@ -1,59 +1,65 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableRowSorter;
 import java.awt.*;
 import java.awt.event.*;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * MainDashboard.java
- * * Purpose: Primary Graphical User Interface for the Bebest Inventory Management System (IMS).
- * * Features:
- * - Responsive Layout: Utilizes BorderLayout and BoxLayout for dynamic window resizing.
- * - Data Integrity: Implements input validation and SQL error feedback for duplicate entries.
- * - UX Design: Custom-styled action buttons with interactive hover animations.
- * - Integration: Real-time synchronization with the MySQL database via the InventoryManager.
+ * * PURPOSE: 
+ * Acts as the primary Graphical User Interface (GUI) for the Bebest Inventory Management System.
+ * It facilitates real-time interaction between the user and the MySQL database.
+ * * KEY ARCHITECTURAL FEATURES:
+ * - Model-View-Controller (MVC) Influence: Separates UI logic from database transactions.
+ * - Dynamic Data Typing: Overrides TableModel classes to allow mathematical sorting of currency/stock.
+ * - Event-Driven Architecture: Uses ActionListeners and MouseListeners for real-time data synchronization.
  * * @author Bebest Development Team
- * @version 2.2 (Finalized UI & Documentation)
+ * @version 2.2 (Finalized Technical Release)
  */
 public class MainDashboard extends JFrame {
     private static final long serialVersionUID = 1L;
 
-    // UI Structure Components
+    // --- UI Structure Components ---
     private JPanel sidebar, header, contentArea;
     private JTextField scanField, txtName, txtCategory, txtPrice, txtQty, txtBarcode;
     private JTable productTable;
     private DefaultTableModel tableModel;
 
     /**
-     * Constructor: Initializes the application window, assembles the UI components,
-     * and triggers the initial data fetch from the database.
+     * Constructor: Orchestrates the assembly of the GUI.
+     * Sets up window properties, initializes sub-panels, and performs the initial database fetch.
      */
     public MainDashboard() {
         setupWindow();
         initSidebar();
         initHeader();
         initContentArea();
-        refreshTable(); // Loads current inventory into the table on startup
+        refreshTable(); // Syncs UI with MySQL on startup
     }
 
     /**
-     * Configures the main JFrame properties including title, size limits, and centering.
+     * Configures the main JFrame properties.
+     * Uses BorderLayout to manage the three primary zones: Sidebar (West), Header (North), and Content (Center).
      */
     private void setupWindow() {
         setTitle("Bebest Store Management System");
         setSize(1100, 700);
-        setMinimumSize(new Dimension(1000, 600)); // Prevents UI overlapping on small windows
+        setMinimumSize(new Dimension(1000, 600)); 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); // Centers the application on the screen
+        setLocationRelativeTo(null); 
         setLayout(new BorderLayout());
     }
 
     /**
-     * Initializes the side navigation panel with a modern "Enterprise" navy theme.
+     * Creates the left-hand navigation sidebar.
+     * Uses a deep navy theme (33, 47, 61) to provide high contrast against the content area.
      */
     private void initSidebar() {
         sidebar = new JPanel();
-        sidebar.setBackground(new Color(33, 47, 61)); // Deep Navy
+        sidebar.setBackground(new Color(33, 47, 61)); 
         sidebar.setPreferredSize(new Dimension(180, 700));
         sidebar.setLayout(new FlowLayout(FlowLayout.CENTER, 0, 40));
         
@@ -66,7 +72,8 @@ public class MainDashboard extends JFrame {
     }
 
     /**
-     * Initializes the top header featuring the barcode scanner simulation input.
+     * Initializes the top header containing the Barcode Scanner simulation.
+     * The scanField is programmed to trigger processScan() immediately upon 'Enter'.
      */
     private void initHeader() {
         header = new JPanel(new FlowLayout(FlowLayout.LEFT, 30, 20));
@@ -81,37 +88,58 @@ public class MainDashboard extends JFrame {
         header.add(scanField);
         add(header, BorderLayout.NORTH);
 
-        // Listener for scanning: executes search logic on 'Enter' key press
         scanField.addActionListener(e -> processScan());
     }
 
     /**
-     * Main UI container area featuring the Inventory Table and the Product Details "Card."
+     * Assembles the main dashboard workspace.
+     * 1. Configures a custom DefaultTableModel that treats Price/Stock as numbers, not text.
+     * 2. Implements a TableRowSorter to enable manual and programmatic sorting.
+     * 3. Sets a default SortKey to prioritize high-value inventory at the top.
      */
     private void initContentArea() {
         contentArea = new JPanel(new BorderLayout(25, 0));
-        contentArea.setBackground(new Color(242, 244, 244)); // Light Cloud Gray
+        contentArea.setBackground(new Color(242, 244, 244)); 
         contentArea.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
         add(contentArea, BorderLayout.CENTER);
 
-        // --- Table Section: Data Visualization ---
-        tableModel = new DefaultTableModel(new String[]{"Barcode", "Name", "Category", "Price", "Stock"}, 0);
+        // --- Model Definition with Numeric Logic ---
+        String[] columns = {"Barcode", "Name", "Category", "Price", "Stock"};
+        tableModel = new DefaultTableModel(columns, 0) {
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                switch (columnIndex) {
+                    case 3: return Double.class;  // Forces numeric sort for Price
+                    case 4: return Integer.class; // Forces numeric sort for Stock
+                    default: return String.class;
+                }
+            }
+        };
+
         productTable = new JTable(tableModel);
         productTable.setRowHeight(35);
         productTable.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         productTable.getTableHeader().setFont(new Font("Segoe UI", Font.BOLD, 13));
+
+        // --- Sorting Engine Configuration ---
+        TableRowSorter<DefaultTableModel> sorter = new TableRowSorter<>(tableModel);
+        productTable.setRowSorter(sorter);
         
+        // Initial Sort State: Price (Column 3) Descending
+        List<RowSorter.SortKey> sortKeys = new ArrayList<>();
+        sortKeys.add(new RowSorter.SortKey(3, SortOrder.DESCENDING));
+        sorter.setSortKeys(sortKeys);
+
         JScrollPane scrollPane = new JScrollPane(productTable);
         scrollPane.setBorder(BorderFactory.createTitledBorder("INVENTORY DATABASE"));
         contentArea.add(scrollPane, BorderLayout.CENTER);
 
-        // --- Right Side Control Panel: Data Entry and Action Controls ---
+        // --- Right-Side Form Panel ---
         JPanel rightPanel = new JPanel();
         rightPanel.setPreferredSize(new Dimension(320, 600));
         rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
         rightPanel.setOpaque(false);
 
-        // Product Form "Card" Styling
         JPanel formCard = new JPanel(new GridLayout(6, 2, 10, 15));
         formCard.setBackground(Color.WHITE);
         formCard.setBorder(BorderFactory.createCompoundBorder(
@@ -126,17 +154,16 @@ public class MainDashboard extends JFrame {
         formCard.add(new JLabel("Price:"));   txtPrice = new JTextField();   formCard.add(txtPrice);
         formCard.add(new JLabel("Qty:"));     txtQty = new JTextField();     formCard.add(txtQty);
 
-        // Action Buttons (Color Coded)
+        // --- Action Control Group ---
         JButton btnAdd = new JButton("ADD PRODUCT");
-        styleButton(btnAdd, new Color(40, 180, 99)); // Success Emerald Green
+        styleButton(btnAdd, new Color(40, 180, 99)); 
         
         JButton btnDelete = new JButton("DELETE");
-        styleButton(btnDelete, new Color(203, 67, 53)); // Soft Alizarin Red
+        styleButton(btnDelete, new Color(203, 67, 53)); 
 
         JButton btnRefresh = new JButton("REFRESH TABLE");
-        styleButton(btnRefresh, new Color(52, 152, 219)); // Action Sky Blue
+        styleButton(btnRefresh, new Color(52, 152, 219)); 
         
-        // Button Row Assembly
         JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 10));
         btnRow.setOpaque(false);
         btnAdd.setPreferredSize(new Dimension(140, 45));
@@ -149,21 +176,18 @@ public class MainDashboard extends JFrame {
         rightPanel.add(btnRow);
         contentArea.add(rightPanel, BorderLayout.EAST);
 
-        // Event Listeners for CRUD actions
+        // --- Event Binding ---
         btnAdd.addActionListener(e -> handleAdd());
         btnDelete.addActionListener(e -> handleDelete());
         btnRefresh.addActionListener(e -> refreshTable());
-        
-        // Table Selection Listener: Automatically fills the form with selected row data
         productTable.addMouseListener(new MouseAdapter() {
             public void mouseClicked(MouseEvent e) { populateFieldsFromTable(); }
         });
     }
 
     /**
-     * Styles buttons with modern flat aesthetics, white text, and hover animations.
-     * @param btn The JButton to style.
-     * @param baseColor The theme color for the button.
+     * Standardizes button appearance across the application.
+     * Includes a MouseListener to simulate modern web-style hover highlights.
      */
     private void styleButton(JButton btn, Color baseColor) {
         btn.setBackground(baseColor);
@@ -174,7 +198,6 @@ public class MainDashboard extends JFrame {
         btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
         
-        // Mouse listener for "Brighter on Hover" effect
         btn.addMouseListener(new MouseAdapter() {
             public void mouseEntered(MouseEvent e) { btn.setBackground(baseColor.brighter()); }
             public void mouseExited(MouseEvent e) { btn.setBackground(baseColor); }
@@ -182,7 +205,8 @@ public class MainDashboard extends JFrame {
     }
 
     /**
-     * Logic for adding a product. Validates input and provides feedback for database errors.
+     * CRUD: CREATE. 
+     * Validates form inputs before passing them to the InventoryManager for SQL insertion.
      */
     private void handleAdd() {
         if (validateInputs()) {
@@ -196,21 +220,21 @@ public class MainDashboard extends JFrame {
                 clearFields();
                 JOptionPane.showMessageDialog(this, "Product saved successfully.");
             } else {
-                // Catches SQL integrity violations (e.g., duplicate barcode)
                 JOptionPane.showMessageDialog(this, 
-                    "Error: Barcode '" + txtBarcode.getText() + "' already exists.", 
-                    "Entry Error", JOptionPane.ERROR_MESSAGE);
+                    "Error: Barcode '" + txtBarcode.getText() + "' already exists in database.", 
+                    "Database Integrity Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     /**
-     * Logic for deleting a product. Requires user confirmation before database execution.
+     * CRUD: DELETE.
+     * Identifies the target SKU from the text field and executes removal after user confirmation.
      */
     private void handleDelete() {
         String code = txtBarcode.getText();
         if (code.isEmpty()) return;
-        int confirm = JOptionPane.showConfirmDialog(this, "Delete SKU: " + code + "?", "Confirm", JOptionPane.YES_NO_OPTION);
+        int confirm = JOptionPane.showConfirmDialog(this, "Permanently delete SKU: " + code + "?", "Confirm Deletion", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
             if (InventoryManager.deleteProduct(code)) {
                 refreshTable();
@@ -220,7 +244,8 @@ public class MainDashboard extends JFrame {
     }
 
     /**
-     * Re-fetches all records from the products table and refreshes the JTable UI.
+     * DATA SYNC: REFRESH.
+     * Clears the current table view and re-populates it with the latest result set from MySQL.
      */
     private void refreshTable() {
         tableModel.setRowCount(0);
@@ -228,8 +253,13 @@ public class MainDashboard extends JFrame {
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT * FROM products")) {
             while (rs.next()) {
-                tableModel.addRow(new Object[]{ rs.getString("barcode"), rs.getString("product_name"),
-                        rs.getString("category"), rs.getDouble("price"), rs.getInt("stock_quantity") });
+                tableModel.addRow(new Object[]{ 
+                    rs.getString("barcode"), 
+                    rs.getString("product_name"),
+                    rs.getString("category"), 
+                    rs.getDouble("price"), 
+                    rs.getInt("stock_quantity") 
+                });
             }
         } catch (Exception e) { 
             e.printStackTrace(); 
@@ -237,61 +267,61 @@ public class MainDashboard extends JFrame {
     }
 
     /**
-     * Utility: Maps data from a selected JTable row back to the input fields for editing or deletion.
+     * UI HELPER: POPULATE.
+     * When a row is selected, this method transfers that data into the side-panel text fields.
      */
     private void populateFieldsFromTable() {
         int row = productTable.getSelectedRow();
         if (row != -1) {
-            txtBarcode.setText(tableModel.getValueAt(row, 0).toString());
-            txtName.setText(tableModel.getValueAt(row, 1).toString());
-            txtCategory.setText(tableModel.getValueAt(row, 2).toString());
-            txtPrice.setText(tableModel.getValueAt(row, 3).toString());
-            txtQty.setText(tableModel.getValueAt(row, 4).toString());
+            // Converts internal model index to view index (essential when table is sorted)
+            int modelRow = productTable.convertRowIndexToModel(row);
+            txtBarcode.setText(tableModel.getValueAt(modelRow, 0).toString());
+            txtName.setText(tableModel.getValueAt(modelRow, 1).toString());
+            txtCategory.setText(tableModel.getValueAt(modelRow, 2).toString());
+            txtPrice.setText(tableModel.getValueAt(modelRow, 3).toString());
+            txtQty.setText(tableModel.getValueAt(modelRow, 4).toString());
         }
     }
 
     /**
-     * Input Sanitization: Ensures mandatory fields are filled and numeric fields are valid.
-     * @return true if all validations pass.
+     * VALIDATION: Logic check to ensure no null values are sent to the database
+     * and that Price/Qty are valid numbers.
      */
     private boolean validateInputs() {
         try {
-            if (txtBarcode.getText().trim().isEmpty() || txtName.getText().trim().isEmpty()) throw new Exception("Empty fields!");
+            if (txtBarcode.getText().trim().isEmpty() || txtName.getText().trim().isEmpty()) throw new Exception();
             Double.parseDouble(txtPrice.getText());
             Integer.parseInt(txtQty.getText());
             return true;
         } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Please check your inputs (Numbers only for Price/Qty).", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Validation Failed: Ensure all fields are filled and numeric fields are valid.", "Input Error", JOptionPane.ERROR_MESSAGE);
             return false;
         }
     }
 
-    /**
-     * Utility: Resets the form fields after a successful operation.
-     */
     private void clearFields() {
         txtBarcode.setText(""); txtName.setText(""); txtCategory.setText("");
         txtPrice.setText(""); txtQty.setText("");
     }
 
     /**
-     * Simulation of a barcode scan. Searches the database and notifies the user of the result.
+     * SIMULATION: Logic for the Barcode Scanner.
+     * Searches for a SKU match in the Product list and notifies the user.
      */
     private void processScan() {
         Product p = InventoryManager.getProductByBarcode(scanField.getText());
-        if (p != null) JOptionPane.showMessageDialog(this, "Product Identified: " + p.getName());
-        else JOptionPane.showMessageDialog(this, "Barcode not found.");
+        if (p != null) JOptionPane.showMessageDialog(this, "MATCH FOUND\nProduct: " + p.getName() + "\nPrice: " + p.getPrice());
+        else JOptionPane.showMessageDialog(this, "SKU NOT RECOGNIZED");
         scanField.setText("");
     }
 
     /**
-     * Application Entry Point: Configures the OS-native Look & Feel and launches the GUI.
+     * APP LAUNCHER: Sets the look and feel to the system native (Windows/Mac) for a cleaner UI experience.
      */
     public static void main(String[] args) {
         try { 
-            // Makes the UI match the user's Operating System (Windows/Mac/Linux)
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); 
-        } catch (Exception e) {}
+        } catch (Exception e) { e.printStackTrace(); }
         SwingUtilities.invokeLater(() -> new MainDashboard().setVisible(true));
     }
 }

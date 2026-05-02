@@ -5,7 +5,7 @@ import java.sql.*;
  * * Purpose: Provides a secure Data Access Object (DAO) for the Bebest IMS.
  * Handles MySQL connection lifecycles and CRUD operations using Parameterized Queries.
  * * @author Bebest Development Team
- * @version 2.0
+ * @version 2.1
  */
 public class InventoryManager {
 

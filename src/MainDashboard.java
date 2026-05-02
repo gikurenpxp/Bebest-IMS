@@ -168,13 +168,24 @@ public class MainDashboard extends JFrame {
      */
     private void handleAdd() {
         if (validateInputs()) {
-            boolean success = InventoryManager.addProduct(txtBarcode.getText(), txtName.getText(),
-                    txtCategory.getText(), Double.parseDouble(txtPrice.getText()),
-                    Integer.parseInt(txtQty.getText()));
+            boolean success = InventoryManager.addProduct(
+                    txtBarcode.getText(), 
+                    txtName.getText(),
+                    txtCategory.getText(), 
+                    Double.parseDouble(txtPrice.getText()),
+                    Integer.parseInt(txtQty.getText())
+            );
+
             if (success) {
                 refreshTable();
                 clearFields();
-                JOptionPane.showMessageDialog(this, "Product added to database.");
+                JOptionPane.showMessageDialog(this, "Success: Product saved to database.");
+            } else {
+                // If it failed (returned false), it's almost always a duplicate barcode
+                JOptionPane.showMessageDialog(this, 
+                    "Failed to add product.\nReason: Barcode '" + txtBarcode.getText() + "' already exists in the system.", 
+                    "Entry Error", 
+                    JOptionPane.ERROR_MESSAGE);
             }
         }
     }

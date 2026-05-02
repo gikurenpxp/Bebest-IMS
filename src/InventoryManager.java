@@ -2,18 +2,18 @@ import java.sql.*;
 
 /**
  * InventoryManager.java
- * Purpose: Handles all backend database interactions for the Bebest Store.
- * This class manages the connection lifecycle and executes CRUD (Create, Read, Update, Delete) operations.
+ * Purpose: Provides a centralized data access layer for the Bebest Store Management System.
+ * This class handles the lifecycle of MySQL connections and executes secure CRUD operations
+ * to ensure data integrity across the inventory.
  */
 public class InventoryManager {
 
     /**
-     * Establishes a connection to the local MySQL database.
-     * @return Connection object to be used for SQL execution.
-     * @throws Exception if the driver is missing or credentials are incorrect.
+     * Establishes a connection to the MySQL database.
+     * @return A valid Connection object.
+     * @throws Exception if connection strings are invalid or the driver is missing.
      */
     public static Connection connect() throws Exception {
-        // Database credentials - ensures connection to the bebest_ims_db schema
         String url = "jdbc:mysql://localhost:3306/bebest_ims_db"; 
         String user = "root";
         String password = ""; 
@@ -21,18 +21,17 @@ public class InventoryManager {
     }
 
     /**
-     * Records a new product into the database inventory.
-     * @param barcode Unique identifier from the product packaging.
-     * @param name The display name of the item.
-     * @param category Grouping for the item (e.g., Canned Goods).
-     * @param price Unit price of the item.
-     * @param qty Initial stock amount.
+     * Persists a new product record into the database.
+     * @param barcode The unique identifier for the SKU.
+     * @param name The descriptive name of the product.
+     * @param category The product grouping (e.g., Beverage, Canned Goods).
+     * @param price The unit selling price.
+     * @param qty The initial quantity available for sale.
      */
     public static void addProduct(String barcode, String name, String category, double price, int qty) {
-        // Using Parameterized Query to prevent SQL Injection attacks
+        // SQL query using placeholders to prevent SQL Injection
         String query = "INSERT INTO products (barcode, product_name, category, price, stock_quantity) VALUES (?, ?, ?, ?, ?)";
 
-        // Try-with-resources: Automatically closes the connection and statement after execution
         try (Connection conn = connect(); 
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             
@@ -43,7 +42,7 @@ public class InventoryManager {
             pstmt.setInt(5, qty);
 
             pstmt.executeUpdate(); 
-            System.out.println("LOG: Successfully added " + name + " to the database.");
+            System.out.println("LOG [Add]: Successfully recorded " + name + " in system.");
 
         } catch (Exception e) {
             System.err.println("DATABASE ERROR [Add]: " + e.getMessage());
@@ -51,10 +50,9 @@ public class InventoryManager {
     }
 
     /**
-     * Retrieves a single product's data based on a barcode scan.
-     * Used primarily by the Point of Sale (POS) and Search features.
+     * Queries the database for a specific product using its barcode.
      * @param code The scanned barcode string.
-     * @return A Product object if found, otherwise returns null.
+     * @return A Product model object if found; otherwise, null.
      */
     public static Product getProductByBarcode(String code) {
         String query = "SELECT * FROM products WHERE barcode = ?";
@@ -66,7 +64,7 @@ public class InventoryManager {
             ResultSet rs = pstmt.executeQuery();
             
             if (rs.next()) {
-                // Mapping the database record to a Java Object (Product class)
+                // Map the ResultSet row to a Product Object
                 return new Product(
                     rs.getString("product_name"),
                     rs.getDouble("price"),
@@ -76,54 +74,61 @@ public class InventoryManager {
         } catch (Exception e) {
             System.err.println("DATABASE ERROR [Search]: " + e.getMessage());
         }
-        return null; // Signals to the UI that no match was found
+        return null;
     }
 
     /**
-     * Updates the pricing of an existing product via its unique ID.
+     * Updates an existing product's pricing and stock levels.
+     * @param barcode Unique barcode of the item to modify.
+     * @param newPrice Updated unit price.
+     * @param newQty Updated stock quantity.
      */
-    public static void updateProductPrice(int id, double newPrice) {
-        String query = "UPDATE products SET price = ? WHERE id = ?";
+    public static void updateProductByBarcode(String barcode, double newPrice, int newQty) {
+        String query = "UPDATE products SET price = ?, stock_quantity = ? WHERE barcode = ?";
 
         try (Connection conn = connect();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             
             pstmt.setDouble(1, newPrice);
-            pstmt.setInt(2, id);
+            pstmt.setInt(2, newQty);
+            pstmt.setString(3, barcode);
 
-            int rowsAffected = pstmt.executeUpdate();
-            if (rowsAffected > 0) {
-                System.out.println("LOG: Price updated for Product ID " + id);
-            }
+            pstmt.executeUpdate();
+            System.out.println("LOG [Update]: Records updated for SKU " + barcode);
         } catch (Exception e) {
             System.err.println("DATABASE ERROR [Update]: " + e.getMessage());
         }
     }
 
     /**
-     * Permanently removes a product from the inventory.
+     * Removes a product record from the database based on its unique barcode.
+     * @param barcode The barcode string used as the deletion key.
      */
-    public static void deleteProduct(int id) {
-        String query = "DELETE FROM products WHERE id = ?";
+    public static void deleteProduct(String barcode) {
+        String query = "DELETE FROM products WHERE barcode = ?";
 
         try (Connection conn = connect();
              PreparedStatement pstmt = conn.prepareStatement(query)) {
             
-            pstmt.setInt(1, id);
+            pstmt.setString(1, barcode); 
             pstmt.executeUpdate();
-            System.out.println("LOG: Product ID " + id + " deleted from system.");
+            System.out.println("LOG [Delete]: Successfully removed product " + barcode);
+            
         } catch (Exception e) {
             System.err.println("DATABASE ERROR [Delete]: " + e.getMessage());
         }
     }
 
     /**
-     * Utility method for developer testing.
-     * In the final application, this is replaced by UI-triggered actions.
+     * Main method used for unit testing the database logic.
      */
     public static void main(String[] args) {
-        // Initial test data injection
-        addProduct("48012345", "Canned Tuna", "Canned Goods", 35.50, 100);
-        addProduct("48067890", "Instant Noodles", "Pasta/Noodles", 12.00, 200);
+        try {
+            System.out.println("Testing database connection...");
+            connect();
+            System.out.println("Connection successful!");
+        } catch (Exception e) {
+            System.err.println("Connection failed: " + e.getMessage());
+        }
     }
 }

@@ -1,6 +1,7 @@
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 public class InventoryManager {
 
@@ -65,6 +66,30 @@ public class InventoryManager {
             System.out.println("Error deleting product: " + e.getMessage());
         }
     }
+    
+    public static Product getProductByBarcode(String code) {
+        String query = "SELECT * FROM products WHERE barcode = ?";
+        try (Connection conn = connect();
+             PreparedStatement pstmt = conn.prepareStatement(query)) {
+            
+            pstmt.setString(1, code);
+            ResultSet rs = pstmt.executeQuery();
+            
+            if (rs.next()) {
+                // Return a Product object with name, price, etc.
+                return new Product(
+                    rs.getString("product_name"),
+                    rs.getDouble("price"),
+                    rs.getInt("stock")
+                );
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null; // Product not found
+    }
+    
+    
 
     // 3. The MAIN method is where you "run" the code to test it
     public static void main(String[] args) {

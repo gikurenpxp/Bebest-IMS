@@ -6,229 +6,215 @@ import java.sql.*;
 
 /**
  * MainDashboard.java
- * * Purpose: Serves as the primary graphical interface for the Bebest Store Management System.
- * Architecture: Utilizes a BorderLayout with a fixed sidebar for navigation and an 
- * absolute-positioned content area for modular inventory management.
+ * * Purpose: Primary Graphical User Interface for the Bebest IMS.
+ * Features: Dynamic resizing, input validation, and interactive button styling.
  */
 public class MainDashboard extends JFrame {
     
     private static final long serialVersionUID = 1L;
     
-    // --- UI Layout Components ---
+    // UI Structure
     private JPanel sidebar, header, contentArea;
-    private JTextField scanField;
-   
-    // --- Inventory Management Components ---
+    private JTextField scanField, txtName, txtCategory, txtPrice, txtQty, txtBarcode;
     private JTable productTable;
     private DefaultTableModel tableModel;
-    private JTextField txtName, txtCategory, txtPrice, txtQty, txtBarcode;
 
-    /**
-     * Constructor: Orchestrates the initialization of the dashboard layout,
-     * theme application, and initial data loading.
-     */
     public MainDashboard() {
-        // Window Meta-data
+        setupWindow();
+        initSidebar();
+        initHeader();
+        initContentArea();
+        
+        refreshTable(); // Initial data load
+    }
+
+    private void setupWindow() {
         setTitle("Bebest Store Management System");
         setSize(1100, 700);
+        setMinimumSize(new Dimension(1000, 600)); 
         setDefaultCloseOperation(EXIT_ON_CLOSE);
-        setLocationRelativeTo(null); 
+        setLocationRelativeTo(null);
         setLayout(new BorderLayout());
+    }
 
-        // --- SECTION 1: SIDEBAR (Navigation Branding) ---
+    private void initSidebar() {
         sidebar = new JPanel();
         sidebar.setBackground(new Color(44, 62, 80)); 
-        sidebar.setPreferredSize(new Dimension(200, 700));
-        sidebar.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 20));
+        sidebar.setPreferredSize(new Dimension(220, 700));
+        sidebar.setLayout(new FlowLayout(FlowLayout.CENTER, 20, 30));
         
         JLabel logo = new JLabel("BEBEST IMS");
         logo.setForeground(Color.WHITE);
-        logo.setFont(new Font("Arial", Font.BOLD, 20));
+        logo.setFont(new Font("Segoe UI", Font.BOLD, 24));
         sidebar.add(logo);
-
-        // --- SECTION 2: HEADER (Search & Scanning Bar) ---
-        header = new JPanel();
-        header.setBackground(Color.WHITE);
-        header.setPreferredSize(new Dimension(1100, 60));
-        header.setLayout(new FlowLayout(FlowLayout.LEFT, 30, 15));
-        
-        JLabel lblSearch = new JLabel("Scan Barcode:");
-        scanField = new JTextField(30);
-        header.add(lblSearch);
-        header.add(scanField);
-
-        // --- SECTION 3: CONTENT VIEWPORT (Active Module Area) ---
-        contentArea = new JPanel();
-        contentArea.setBackground(new Color(236, 240, 241)); 
-        contentArea.setLayout(null); 
-
-        // Component Assembly
         add(sidebar, BorderLayout.WEST);
+    }
+
+    private void initHeader() {
+        header = new JPanel(new FlowLayout(FlowLayout.LEFT, 30, 20));
+        header.setBackground(Color.WHITE);
+        header.setPreferredSize(new Dimension(1100, 70));
+        
+        JLabel lblScan = new JLabel("Barcode Scanner Simulation:");
+        lblScan.setFont(new Font("Segoe UI", Font.ITALIC, 13));
+        scanField = new JTextField(30);
+        
+        header.add(lblScan);
+        header.add(scanField);
         add(header, BorderLayout.NORTH);
-        add(contentArea, BorderLayout.CENTER);
 
-        // Module Initialization
-        setupInventoryUI();
-        refreshTable();
-
-        // Global Event Listeners
         scanField.addActionListener(e -> processScan());
     }
 
-    /**
-     * Constructs the Inventory Management module.
-     * Features include a synchronized data table and a product entry form.
-     */
-    private void setupInventoryUI() {
-        contentArea.removeAll();
+    private void initContentArea() {
+        contentArea = new JPanel(new BorderLayout(25, 0));
+        contentArea.setBackground(new Color(236, 240, 241));
+        contentArea.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
+        add(contentArea, BorderLayout.CENTER);
 
-        // 1. DATA TABLE CONFIGURATION
-        String[] columns = {"Barcode", "Name", "Category", "Price", "Stock"};
-        tableModel = new DefaultTableModel(columns, 0);
+        // --- Table Section ---
+        tableModel = new DefaultTableModel(new String[]{"Barcode", "Name", "Category", "Price", "Stock"}, 0);
         productTable = new JTable(tableModel);
-        JScrollPane scrollPane = new JScrollPane(productTable);
-        scrollPane.setBounds(30, 30, 600, 450); 
-        contentArea.add(scrollPane);
+        productTable.setRowHeight(30);
+        contentArea.add(new JScrollPane(productTable), BorderLayout.CENTER);
 
-        // 2. ENTRY FORM CONFIGURATION
-        JPanel form = new JPanel(new GridLayout(6, 2, 10, 10));
-        form.setBounds(650, 30, 300, 250);
+        // --- Right Side Control Panel ---
+        JPanel rightPanel = new JPanel();
+        rightPanel.setPreferredSize(new Dimension(320, 600));
+        rightPanel.setLayout(new BoxLayout(rightPanel, BoxLayout.Y_AXIS));
+        rightPanel.setOpaque(false);
+
+        // Form Fields
+        JPanel form = new JPanel(new GridLayout(6, 2, 10, 15));
+        form.setMaximumSize(new Dimension(300, 280));
         form.setOpaque(false);
-
         form.add(new JLabel("Barcode:")); txtBarcode = new JTextField(); form.add(txtBarcode);
         form.add(new JLabel("Name:"));    txtName = new JTextField();    form.add(txtName);
         form.add(new JLabel("Category:"));txtCategory = new JTextField();form.add(txtCategory);
         form.add(new JLabel("Price:"));   txtPrice = new JTextField();   form.add(txtPrice);
         form.add(new JLabel("Qty:"));     txtQty = new JTextField();     form.add(txtQty);
-        contentArea.add(form);
 
-        // 3. CONTROL BUTTONS
+        // Styled Action Buttons
         JButton btnAdd = new JButton("Add Product");
-        btnAdd.setBackground(new Color(46, 204, 113)); // Success Green
-        btnAdd.setBounds(650, 300, 145, 40);
+        styleButton(btnAdd, new Color(46, 204, 113));
         
         JButton btnDelete = new JButton("Delete Product");
-        btnDelete.setBackground(new Color(231, 76, 60)); // Alert Red
-        btnDelete.setBounds(805, 300, 145, 40);
+        styleButton(btnDelete, new Color(231, 76, 60));
 
-        JButton btnRefresh = new JButton("Refresh Table");
-        btnRefresh.setBackground(new Color(52, 152, 219)); // Info Blue
-        btnRefresh.setBounds(650, 350, 300, 40);
-
-        contentArea.add(btnAdd);
-        contentArea.add(btnDelete);
-        contentArea.add(btnRefresh);
-
-        // --- BUTTON EVENT LOGIC ---
+        JButton btnRefresh = new JButton("Refresh Inventory");
+        styleButton(btnRefresh, new Color(52, 152, 219));
         
-        // Add Record Logic: Captures form data and persists it to the database
-        btnAdd.addActionListener(e -> {
-            try {
-                InventoryManager.addProduct(txtBarcode.getText(), txtName.getText(), 
-                                          txtCategory.getText(), Double.parseDouble(txtPrice.getText()), 
-                                          Integer.parseInt(txtQty.getText()));
-                refreshTable();
-                clearFields();
-            } catch (NumberFormatException ex) {
-                JOptionPane.showMessageDialog(this, "Validation Error: Price and Qty must be numeric.");
-            }
-        });
+        // Button Layout
+        JPanel btnRow = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        btnRow.setOpaque(false);
+        btnAdd.setPreferredSize(new Dimension(140, 45));
+        btnDelete.setPreferredSize(new Dimension(140, 45));
+        btnRefresh.setPreferredSize(new Dimension(290, 45));
+        btnRow.add(btnAdd); btnRow.add(btnDelete); btnRow.add(btnRefresh);
 
-        // Delete Logic: Removes the selected product based on barcode identification
-        btnDelete.addActionListener(e -> {
-            String barcode = txtBarcode.getText();
-            if(!barcode.isEmpty()) {
-            	int confirm = JOptionPane.showConfirmDialog(this, "Confirm deletion of Barcode: " + barcode + "?", "Delete Confirmation", JOptionPane.YES_NO_OPTION);
-                if(confirm == JOptionPane.YES_OPTION) {
-                    InventoryManager.deleteProduct(barcode); 
-                    refreshTable();
-                    clearFields();
-                }
-            } else {
-                JOptionPane.showMessageDialog(this, "Operation Error: No product selected.");
-            }
-        });
+        rightPanel.add(form);
+        rightPanel.add(Box.createVerticalStrut(30));
+        rightPanel.add(btnRow);
+        contentArea.add(rightPanel, BorderLayout.EAST);
 
-        // Refresh Logic: Manually triggers a database sync to update the table view
-        btnRefresh.addActionListener(e -> {
-            refreshTable();
-            JOptionPane.showMessageDialog(this, "Inventory synchronization complete.");
-        });
-
-        // Selection Listener: Populates the entry form with data from a clicked table row
+        // Event Listeners
+        btnAdd.addActionListener(e -> handleAdd());
+        btnDelete.addActionListener(e -> handleDelete());
+        btnRefresh.addActionListener(e -> refreshTable());
+        
         productTable.addMouseListener(new MouseAdapter() {
-            public void mouseClicked(MouseEvent e) {
-                int row = productTable.getSelectedRow();
-                txtBarcode.setText(tableModel.getValueAt(row, 0).toString());
-                txtName.setText(tableModel.getValueAt(row, 1).toString());
-                txtCategory.setText(tableModel.getValueAt(row, 2).toString());
-                txtPrice.setText(tableModel.getValueAt(row, 3).toString());
-                txtQty.setText(tableModel.getValueAt(row, 4).toString());
-            }
+            public void mouseClicked(MouseEvent e) { populateFieldsFromTable(); }
         });
-        
-        contentArea.repaint();
     }
 
     /**
-     * Synchronizes the UI table with the MySQL database records.
+     * Applies professional styling and hover effects to buttons.
      */
+    private void styleButton(JButton btn, Color baseColor) {
+        btn.setBackground(baseColor);
+        btn.setForeground(Color.BLACK);
+        btn.setFocusPainted(false);
+        btn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btn.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btn.addMouseListener(new MouseAdapter() {
+            public void mouseEntered(MouseEvent e) { btn.setBackground(baseColor.brighter()); }
+            public void mouseExited(MouseEvent e) { btn.setBackground(baseColor); }
+        });
+    }
+
+    private void handleAdd() {
+        if (validateInputs()) {
+            boolean success = InventoryManager.addProduct(txtBarcode.getText(), txtName.getText(), 
+                                        txtCategory.getText(), Double.parseDouble(txtPrice.getText()), 
+                                        Integer.parseInt(txtQty.getText()));
+            if (success) {
+                refreshTable();
+                clearFields();
+                JOptionPane.showMessageDialog(this, "Product added to database.");
+            }
+        }
+    }
+
+    private void handleDelete() {
+        String code = txtBarcode.getText();
+        if (code.isEmpty()) return;
+        
+        int confirm = JOptionPane.showConfirmDialog(this, "Confirm delete SKU: " + code, "Confirm", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            if (InventoryManager.deleteProduct(code)) {
+                refreshTable();
+                clearFields();
+            }
+        }
+    }
+
     private void refreshTable() {
-        tableModel.setRowCount(0); 
+        tableModel.setRowCount(0);
         try (Connection conn = InventoryManager.connect();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery("SELECT * FROM products")) {
-            
             while (rs.next()) {
-                tableModel.addRow(new Object[]{
-                    rs.getString("barcode"), 
-                    rs.getString("product_name"),
-                    rs.getString("category"), 
-                    rs.getDouble("price"), 
-                    rs.getInt("stock_quantity")
-                });
+                tableModel.addRow(new Object[]{ rs.getString("barcode"), rs.getString("product_name"),
+                    rs.getString("category"), rs.getDouble("price"), rs.getInt("stock_quantity") });
             }
-        } catch (Exception e) { 
-            System.err.println("Table Sync Error: " + e.getMessage());
-        }
+        } catch (Exception e) { e.printStackTrace(); }
     }
 
-    /**
-     * Resets entry form fields to an empty state.
-     */
-    private void clearFields() {
-        txtBarcode.setText(""); 
-        txtName.setText(""); 
-        txtCategory.setText("");
-        txtPrice.setText(""); 
-        txtQty.setText("");
+    private void populateFieldsFromTable() {
+        int row = productTable.getSelectedRow();
+        txtBarcode.setText(tableModel.getValueAt(row, 0).toString());
+        txtName.setText(tableModel.getValueAt(row, 1).toString());
+        txtCategory.setText(tableModel.getValueAt(row, 2).toString());
+        txtPrice.setText(tableModel.getValueAt(row, 3).toString());
+        txtQty.setText(tableModel.getValueAt(row, 4).toString());
     }
 
-    /**
-     * Executes the scanning logic by querying the database for a specific barcode.
-     */
-    private void processScan() {
-        String code = scanField.getText();
-        Product p = InventoryManager.getProductByBarcode(code);
-        
-        if (p != null) {
-            JOptionPane.showMessageDialog(this, "SKU Found: " + p.getName() + "\nUnit Price: P" + p.getPrice());
-        } else {
-            JOptionPane.showMessageDialog(this, "Scanning Error: Barcode not found in database.");
-        }
-        scanField.setText(""); 
-    }
-
-    /**
-     * Launch Point: Configures system look and feel and instantiates the dashboard.
-     */
-    public static void main(String[] args) {
-        try { 
-            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); 
+    private boolean validateInputs() {
+        try {
+            if (txtBarcode.getText().trim().isEmpty() || txtName.getText().trim().isEmpty()) throw new Exception("Empty fields!");
+            Double.parseDouble(txtPrice.getText());
+            Integer.parseInt(txtQty.getText());
+            return true;
         } catch (Exception e) {
-            e.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Please check your inputs (Price and Qty must be numbers).", "Validation Error", JOptionPane.ERROR_MESSAGE);
+            return false;
         }
-        
+    }
+
+    private void clearFields() {
+        txtBarcode.setText(""); txtName.setText(""); txtCategory.setText("");
+        txtPrice.setText(""); txtQty.setText("");
+    }
+
+    private void processScan() {
+        Product p = InventoryManager.getProductByBarcode(scanField.getText());
+        if (p != null) JOptionPane.showMessageDialog(this, "Scan Success: " + p.getName());
+        else JOptionPane.showMessageDialog(this, "SKU not found.");
+        scanField.setText("");
+    }
+
+    public static void main(String[] args) {
+        try { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()); } catch (Exception e) {}
         SwingUtilities.invokeLater(() -> new MainDashboard().setVisible(true));
     }
 }

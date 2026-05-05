@@ -21,7 +21,7 @@ import javax.swing.table.TableRowSorter;
  * Key features include:
  * <ul>
  * <li>Dynamic data retrieval from SQLite via {@link InventoryManager}.</li>
- * <li>A sophisticated JTable implementation with custom renderers for "Pill-style" 
+ * <li>A sophisticated JTable implementation
  * badges and low-stock visual alerts.</li>
  * <li>A sorting mechanism that remains synchronized with the database during deletion.</li>
  * <li>A sidebar-based navigation system for switching between POS and Admin modes.</li>

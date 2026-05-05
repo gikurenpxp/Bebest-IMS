@@ -23,9 +23,9 @@ import java.awt.event.MouseEvent;
  */
 public class CashierPOS extends JFrame {
 
-	private static final long serialVersionUID = 1L;
+    private static final long serialVersionUID = 1L;
     
-	// --- Custom Color Palette ---
+    // --- Custom Color Palette ---
     private final Color SIDEBAR_BG = new Color(21, 34, 46);
     private final Color SIDEBAR_ACTIVE = new Color(31, 47, 60);
     private final Color MAIN_BG = new Color(244, 246, 248);
@@ -34,8 +34,8 @@ public class CashierPOS extends JFrame {
     private final Color TEXT_MUTED = new Color(149, 165, 166);
 
     // --- Active UI Components ---
-    private JTextField scanField, txtDiscount;
-    private JLabel lblTotal, lblSub, lblItems;
+    private JTextField scanField, txtDiscount, txtCash;
+    private JLabel lblTotal, lblSub, lblItems, lblChange;
     private JPanel cartArea;
     private CardLayout cartCardLayout;
     private JTable cartTable;
@@ -155,7 +155,7 @@ public class CashierPOS extends JFrame {
     }
 
     @SuppressWarnings("unused")
-	private JPanel createSidebarMenuButton(String text, boolean isActive) {
+    private JPanel createSidebarMenuButton(String text, boolean isActive) {
         JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 12));
         btnPanel.setBackground(isActive ? SIDEBAR_ACTIVE : SIDEBAR_BG);
         btnPanel.setMaximumSize(new Dimension(220, 45));
@@ -294,6 +294,26 @@ public class CashierPOS extends JFrame {
         
         discountRow.add(txtDiscount);
         discountRow.add(new JLabel("  %"));
+        
+        
+        // --- NEW CASH UI ---
+        JLabel lblCashLabel = new JLabel("CASH INPUT");
+        lblCashLabel.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblCashLabel.setForeground(TEXT_MUTED);
+
+        JPanel cashRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        cashRow.setOpaque(false);
+        txtCash = new JTextField("0", 18);
+        txtCash.setHorizontalAlignment(JTextField.CENTER);
+        txtCash.setPreferredSize(new Dimension(txtCash.getPreferredSize().width, 35));
+        txtCash.setBorder(new LineBorder(new Color(220, 224, 228), 1));
+        
+        cashRow.add(txtCash);
+        
+
+        lblChange = new JLabel("CHANGE: ₱0.00");
+        lblChange.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblChange.setForeground(TEXT_MUTED);
 
         totalsPanel.add(lblSub);
         totalsPanel.add(lblTotal);
@@ -304,6 +324,14 @@ public class CashierPOS extends JFrame {
         totalsPanel.add(lblDiscountLabel);
         totalsPanel.add(Box.createVerticalStrut(8));
         totalsPanel.add(discountRow);
+        
+        // Add Cash and Change to checkout panel
+        totalsPanel.add(Box.createVerticalStrut(15));
+        totalsPanel.add(lblCashLabel);
+        totalsPanel.add(Box.createVerticalStrut(8));
+        totalsPanel.add(cashRow);
+        totalsPanel.add(Box.createVerticalStrut(15));
+        totalsPanel.add(lblChange);
 
         JPanel buttonPanel = new JPanel(new GridLayout(3, 1, 0, 10));
         buttonPanel.setOpaque(false);
@@ -377,6 +405,13 @@ public class CashierPOS extends JFrame {
             public void removeUpdate(DocumentEvent e) { updateTotals(); }
             public void changedUpdate(DocumentEvent e) { updateTotals(); }
         });
+
+        // Handle Cash Input Real-time Updates for Change
+        txtCash.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { updateChange(); }
+            public void removeUpdate(DocumentEvent e) { updateChange(); }
+            public void changedUpdate(DocumentEvent e) { updateChange(); }
+        });
     }
 
     /**
@@ -388,20 +423,33 @@ public class CashierPOS extends JFrame {
         cartCardLayout.show(cartArea, "TABLE");
 
         boolean itemExists = false;
-        
-        // Search for existing entry to prevent duplicate rows
+
         for (int i = 0; i < cartModel.getRowCount(); i++) {
             if (cartModel.getValueAt(i, 0).equals(barcode)) {
+
                 int currentQty = (int) cartModel.getValueAt(i, 2);
+
+                if (currentQty >= p.getStock()) {
+                    JOptionPane.showMessageDialog(this, "Not enough stock!", "Stock Error", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
                 int newQty = currentQty + 1;
                 cartModel.setValueAt(newQty, i, 2);
                 cartModel.setValueAt(newQty * p.getPrice(), i, 3);
+
                 itemExists = true;
                 break;
             }
         }
 
         if (!itemExists) {
+            // 🔥 ADD THIS BLOCK (prevent adding out-of-stock item)
+            if (p.getStock() <= 0) {
+                JOptionPane.showMessageDialog(this, "Item out of stock!", "Stock Error", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
             cartModel.addRow(new Object[]{ barcode, p.getName(), 1, p.getPrice() });
         }
 
@@ -429,11 +477,40 @@ public class CashierPOS extends JFrame {
             discountPercent = 0;
         }
 
+        // clamp discount
+        discountPercent = Math.max(0, Math.min(100, discountPercent));
+
         double finalTotal = subtotal - (subtotal * (discountPercent / 100.0));
 
         lblSub.setText(String.format("SUBTOTAL: ₱%.2f", subtotal));
         lblItems.setText(totalItems + " items");
         lblTotal.setText(String.format("₱%.2f", finalTotal));
+
+        // Update change automatically whenever totals update
+        updateChange();
+    }
+
+    /**
+     * Dynamically calculates change based on cash input and current total.
+     */
+    private void updateChange() {
+        try {
+            double finalTotal = Double.parseDouble(lblTotal.getText().replace("₱", "").replace(",", ""));
+            double cash = 0;
+            
+            if (!txtCash.getText().trim().isEmpty()) {
+                cash = Double.parseDouble(txtCash.getText().trim());
+            }
+
+            double change = cash - finalTotal;
+            if (change < 0 || finalTotal == 0) {
+                lblChange.setText("CHANGE: ₱0.00");
+            } else {
+                lblChange.setText(String.format("CHANGE: ₱%.2f", change));
+            }
+        } catch (NumberFormatException e) {
+            lblChange.setText("CHANGE: ₱0.00");
+        }
     }
 
     /**
@@ -442,6 +519,8 @@ public class CashierPOS extends JFrame {
     private void clearCart() {
         cartModel.setRowCount(0); 
         txtDiscount.setText("0");
+        txtCash.setText("0");
+        lblChange.setText("CHANGE: ₱0.00");
         updateTotals();
         cartCardLayout.show(cartArea, "EMPTY"); 
         scanField.requestFocus();
@@ -453,6 +532,20 @@ public class CashierPOS extends JFrame {
     private void processPayment() {
         if (cartModel.getRowCount() == 0) {
             JOptionPane.showMessageDialog(this, "Cart is empty!", "Notice", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Validate Cash Payment
+        try {
+            double finalTotal = Double.parseDouble(lblTotal.getText().replace("₱", "").replace(",", ""));
+            double cash = Double.parseDouble(txtCash.getText().trim().isEmpty() ? "0" : txtCash.getText().trim());
+
+            if (cash < finalTotal) {
+                JOptionPane.showMessageDialog(this, "Insufficient cash amount!", "Payment Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Please enter a valid cash amount.", "Input Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
         
@@ -472,7 +565,9 @@ public class CashierPOS extends JFrame {
 
         if (allSuccessful) {
             JOptionPane.showMessageDialog(this, 
-                "Payment processed successfully!\nAmount Paid: " + lblTotal.getText(), 
+                "Payment processed successfully!\n\nAmount Due: " + lblTotal.getText() + 
+                "\nAmount Paid: ₱" + txtCash.getText() + 
+                "\n" + lblChange.getText(), 
                 "Success", 
                 JOptionPane.INFORMATION_MESSAGE);
         } else {

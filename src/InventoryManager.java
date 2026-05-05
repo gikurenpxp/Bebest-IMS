@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * Manages database operations for the Inventory Management System.
  * Handles CRUD operations and stock adjustments for the 'products' table.
- * * @author Your Name
+ * * @author BEBEST DEVELOPER
  * @version 1.0
  */
 public class InventoryManager {

@@ -219,26 +219,30 @@ public class AdminLogin extends JFrame {
      * On success: Disposes the login window and launches the Admin Panel.
      * On failure: Displays a security warning and resets the password field.
      */
-    private void handleLogin() {
-        String username = txtUsername.getText().trim();
-        String password = new String(txtPassword.getPassword());
+   private void handleLogin() {
+    String username = txtUsername.getText().trim();
+    String password = new String(txtPassword.getPassword());
 
-        // Hardcoded authentication for initial system gatekeeping
-        if (username.equals("admin") && password.equals("admin123")) {
-            // Success Logic
-            new AdminPanel().setVisible(true);
-            this.dispose(); // Close the login screen
-        } else {
-            // Error Handling Logic
-            JOptionPane.showMessageDialog(this, 
-                "Invalid username or password.", 
-                "Authentication Failed", 
-                JOptionPane.ERROR_MESSAGE);
-            
-            txtPassword.setText(""); // Clear password field for security
-            txtPassword.requestFocus();
-        }
+    // ADMIN
+    if (username.equals("admin") && password.equals("admin123")) {
+        new AdminPanel().setVisible(true);
+        this.dispose();
     }
+    // CASHIER
+    else if (username.equals("cashier") && password.equals("cashier123")) {
+        new CashierPOS().setVisible(true);
+        this.dispose();
+    }
+    else {
+        JOptionPane.showMessageDialog(this,
+            "Invalid username or password.",
+            "Authentication Failed",
+            JOptionPane.ERROR_MESSAGE);
+
+        txtPassword.setText("");
+        txtPassword.requestFocus();
+    }
+}
 
     /**
      * Application entry point. Applies system look and feel and launches the login UI.
